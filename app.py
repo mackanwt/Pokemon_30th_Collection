@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import requests
+import base64
 
 st.set_page_config(page_title="Pokémon 30th Anniversary Collection", layout="wide")
 
@@ -42,7 +43,7 @@ def load_data():
 if "cards_data" not in st.session_state:
     st.session_state.cards_data = load_data()
 
-# Om filen på disk har uppdaterats externt (t.ex. vid manuell tillagd rad), läs in den på nytt om längden skiljer sig
+# Om filen på disk har uppdaterats externt, läs in den på nytt om längden skiljer sig
 disk_data = load_data()
 if len(disk_data) != len(st.session_state.cards_data):
     st.session_state.cards_data = disk_data
@@ -72,8 +73,8 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# Knapp för att spara ändringar permanent direkt till JSON-filen
-if st.button("💾 Spara ändringar", type="primary"):
+# Knapp för att spara ändringar direkt till GitHub
+if st.button("💾 Spara ändringar till GitHub", type="primary"):
     # Synka ändringarna från editor-statusen till dataframe
     if "editor" in st.session_state and st.session_state.editor.get("edited_rows"):
         edited_rows = st.session_state.editor["edited_rows"]
@@ -102,12 +103,41 @@ if st.button("💾 Spara ändringar", type="primary"):
         updated_data.append(row_dict)
         
     st.session_state.cards_data = updated_data
+    json_string = json.dumps(st.session_state.cards_data, ensure_ascii=False, indent=2)
 
-    # SKRIV DIREKT TILL JSON-FILEN PÅ DISKEN
+    # 1. Spara lokalt på disken först
     with open("pokemon_30th_anniversary.json", "w", encoding="utf-8") as f:
-        json.dump(st.session_state.cards_data, f, ensure_ascii=False, indent=2)
+        f.write(json_string)
 
-    st.success("Ändringarna har sparats permanent direkt till JSON-filen!")
+    # 2. Skicka upp till GitHub via API (om hemligheter finns satta)
+    try:
+        if "GITHUB_TOKEN" in st.secrets:
+            token = st.secrets["GITHUB_TOKEN"]
+            repo = st.secrets["GITHUB_REPO"]
+            file_path = st.secrets["GITHUB_FILE_PATH"]
+            
+            url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+            r = requests.get(url, headers=headers)
+            file_sha = r.json().get("sha")
+            
+            encoded_content = base64.b64encode(json_string.encode("utf-8")).decode("utf-8")
+            payload = {
+                "message": "Uppdaterar samling via Streamlit app",
+                "content": encoded_content,
+                "sha": file_sha
+            }
+            put_r = requests.put(url, headers=headers, json=payload)
+            
+            if put_r.status_code in [200, 201]:
+                st.success("Ändringarna sparades permanent och skickades direkt till GitHub!")
+            else:
+                st.error(f"Sparades lokalt, men kunde inte skicka till GitHub: {put_r.json().get('message')}")
+        else:
+            st.success("Ändringarna sparades lokalt!")
+    except Exception as e:
+        st.warning(f"Sparat lokalt. GitHub-synk misslyckades: {e}")
+
     st.rerun()
 
 # Sammanfattning längst ned
