@@ -3,8 +3,8 @@ import pandas as pd
 import json
 import requests
 import base64
+from typing import Any, Tuple
 
-# --- KONFIGURATION ---
 st.set_page_config(page_title="Pokémon 30th Anniversary Collection", layout="wide")
 
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
@@ -43,7 +43,7 @@ def github_save_file(file_path: str, content: Any, commit_message: str) -> Tuple
     except Exception:
         pass
         
-    encoded_content = base64.b64encode(json.dumps(content, ensure_ascii=4).encode('utf-8')).decode('utf-8')
+    encoded_content = base64.b64encode(json.dumps(content, ensure_ascii=False, indent=2).encode('utf-8')).decode('utf-8')
     data = {"message": commit_message, "content": encoded_content}
     if sha:
         data["sha"] = sha
@@ -58,117 +58,107 @@ def github_save_file(file_path: str, content: Any, commit_message: str) -> Tuple
 
 # --- VÄXELKURS ---
 @st.cache_data(ttl=3600)
-def fetch_eur_to_sek_rate() -> float:
+def get_eur_sek_rate():
     try:
-        url = "https://api.exchangerate-api.com/v4/latest/EUR"
-        resp = requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            return float(resp.json().get("rates", {}).get("SEK", 11.28))
+        response = requests.get("https://open.er-api.com/v6/latest/EUR")
+        data = response.json()
+        return float(data["rates"]["SEK"])
     except Exception:
-        pass
-    return 11.28
+        return 11.28
 
-eur_to_sek = fetch_eur_to_sek_rate()
+exchange_rate = get_eur_sek_rate()
 
 # --- LADDA DATA ---
-if "app_data" not in st.session_state or st.session_state["app_data"] is None:
-    loaded_data = github_load_file(DATA_FILE_PATH, [])
-    if not isinstance(loaded_data, list):
-        loaded_data = []
-    st.session_state["app_data"] = loaded_data
+if "cards_data" not in st.session_state:
+    st.session_state.cards_data = github_load_file(DATA_FILE_PATH, [])
 
-collection = st.session_state["app_data"]
-
-# --- LAYOUT & RUBRIK ---
+# Layout med rubrik och växelkurs
 col_title, col_rate = st.columns([3, 1])
 with col_title:
     st.title("🎴 Pokémon 30th Anniversary Collection")
 with col_rate:
     st.markdown(
         f"<div style='text-align: right; padding-top: 25px; color: #666; font-size: 14px;'>"
-        f"💱 <b>Aktuell växelkurs:</b> 1 EUR = <b>{eur_to_sek:.2f} SEK</b>"
+        f"💱 <b>Aktuell växelkurs:</b> 1 EUR = <b>{exchange_rate:.2f} SEK</b>"
         f"</div>",
         unsafe_allow_html=True
     )
 
-if collection:
-    df = pd.DataFrame(collection)
-    
-    # Säkerställ att kolumner finns
+df = pd.DataFrame(st.session_state.cards_data)
+
+if not df.empty:
     for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)", "Skick", "Egen Cardmarket Länk"]:
         if col not in df.columns:
             df[col] = False if col == "Äger" else (0.0 if "EUR" in col else "")
 
-    df["Köpt för (SEK)"] = (pd.to_numeric(df["Köpt för (EUR)"], errors='coerce').fillna(0.0) * eur_to_sek).round(2)
-    df["Värde (SEK)"] = (pd.to_numeric(df["Värde (EUR)"], errors='coerce').fillna(0.0) * eur_to_sek).round(2)
+    df["Köpt för (SEK)"] = (pd.to_numeric(df["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
+    df["Värde (SEK)"] = (pd.to_numeric(df["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
 
-    column_config_edit = {
-        "_id": None,
-        "Äger": st.column_config.CheckboxColumn("Äger", width=50),
-        "Namn": st.column_config.TextColumn("Namn", disabled=True, width=150),
-        "Setnr.": st.column_config.TextColumn("Setnr.", disabled=True, width=80),
-        "Symbol": st.column_config.TextColumn("Symbol", disabled=True, width=70),
-        "Sällsynthet": st.column_config.TextColumn("Sällsynthet", disabled=True, width=130),
-        "Skick": st.column_config.SelectboxColumn("Skick", options=["NM", "EX", "GD", "LP", "PL", "PO"], width=70),
-        "Köpt för (EUR)": st.column_config.NumberColumn("Köpt (€)", format="%.2f", width=80),
-        "Köpt för (SEK)": st.column_config.NumberColumn("Köpt (SEK)", format="%.2f kr", width=90, disabled=True),
-        "Värde (EUR)": st.column_config.NumberColumn("Värde (€)", format="%.2f", width=80),
-        "Värde (SEK)": st.column_config.NumberColumn("Värde (SEK)", format="%.2f kr", width=90, disabled=True),
-        "Google Sök": st.column_config.LinkColumn("Cardmarket Sök", display_text="🔍 Sök", width=100),
-        "Egen Cardmarket Länk": st.column_config.TextColumn("Egen Länk", width=150)
-    }
-
-    edit_columns = [col for col in df.columns if col != "_id"]
-    edit_columns = ["_id"] + edit_columns
+    display_columns = [col for col in df.columns if col != "_id"]
 
     edited_df = st.data_editor(
-        df[edit_columns],
-        column_config=column_config_edit,
-        use_container_width=True,
+        df[display_columns],
+        column_config={
+            "Äger": st.column_config.CheckboxColumn("Äger", default=False),
+            "Namn": st.column_config.TextColumn("Namn", disabled=True),
+            "Setnr.": st.column_config.TextColumn("Setnr.", disabled=True),
+            "Symbol": st.column_config.TextColumn("Symbol", disabled=True),
+            "Sällsynthet": st.column_config.TextColumn("Sällsynthet", disabled=True),
+            "Skick": st.column_config.SelectboxColumn("Skick", options=["NM", "EX", "GD", "LP", "PL", "PO"]),
+            "Köpt för (EUR)": st.column_config.NumberColumn("Köpt för (EUR)", format="%.2f €"),
+            "Köpt för (SEK)": st.column_config.NumberColumn("Köpt för (SEK)", format="%.2f kr", disabled=True),
+            "Värde (EUR)": st.column_config.NumberColumn("Värde (EUR)", format="%.2f €"),
+            "Värde (SEK)": st.column_config.NumberColumn("Värde (SEK)", format="%.2f kr", disabled=True),
+            "Google Sök": st.column_config.LinkColumn("Cardmarket / Sök", display_text="🔍 Sök på Cardmarket"),
+            "Egen Cardmarket Länk": st.column_config.TextColumn("Egen Länk")
+        },
+        disabled=["Namn", "Setnr.", "Symbol", "Sällsynthet", "Köpt för (SEK)", "Värde (SEK)", "Google Sök"],
         hide_index=True,
-        key="collection_editor"
+        use_container_width=True,
+        key="editor"
     )
 
-    if st.button("💾 Spara ändringar till GitHub", type="primary", use_container_width=True):
-        raw_edited = edited_df.to_dict(orient="records")
-        
-        processed_list = []
-        for row in raw_edited:
-            k_eur = float(row.get("Köpt för (EUR)", 0.0) or 0.0)
-            v_eur = float(row.get("Värde (EUR)", 0.0) or 0.0)
+    if st.button("💾 Spara ändringar till GitHub", type="primary"):
+        updated_data = []
+        for i, row in edited_df.iterrows():
+            row_dict = row.to_dict()
+            # Koppla tillbaka originalets _id
+            if i < len(st.session_state.cards_data):
+                row_dict["_id"] = st.session_state.cards_data[i].get("_id", f"card_{i}")
+            else:
+                row_dict["_id"] = f"card_custom_{i}"
             
-            clean_card = {
-                "_id": row.get("_id"),
-                "Äger": bool(row.get("Äger", False)),
-                "Namn": row.get("Namn", ""),
-                "Setnr.": row.get("Setnr.", ""),
-                "Symbol": row.get("Symbol", ""),
-                "Sällsynthet": row.get("Sällsynthet", ""),
-                "Skick": row.get("Skick", "NM"),
-                "Köpt för (EUR)": k_eur,
-                "Köpt för (SEK)": round(k_eur * eur_to_sek, 2),
-                "Värde (EUR)": v_eur,
-                "Värde (SEK)": round(v_eur * eur_to_sek, 2),
-                "Google Sök": row.get("Google Sök", ""),
-                "Egen Cardmarket Länk": str(row.get("Egen Cardmarket Länk") or "").strip()
-            }
-            processed_list.append(clean_card)
+            # Räkna om SEK
+            k_eur = float(row_dict.get("Köpt för (EUR)", 0.0) or 0.0)
+            v_eur = float(row_dict.get("Värde (EUR)", 0.0) or 0.0)
+            row_dict["Köpt för (SEK)"] = round(k_eur * exchange_rate, 2)
+            row_dict["Värde (SEK)"] = round(v_eur * exchange_rate, 2)
+            
+            updated_data.append(row_dict)
 
-        success, msg = github_save_file(DATA_FILE_PATH, processed_list, "Uppdaterade samling 30th Anniversary")
-        
+        # Använd den säkra github_save_file funktionen
+        success, msg = github_save_file(DATA_FILE_PATH, updated_data, "Uppdaterade 30th Anniversary samling")
+
         if success:
-            st.session_state["app_data"] = processed_list
-            st.success("Ändringarna sparades och skickades direkt till GitHub!")
+            st.session_state["cards_data"] = updated_data
+            st.success("Ändringarna sparades direkt till GitHub!")
             st.rerun()
         else:
             st.error(f"Kunde inte spara till GitHub: {msg}")
 
-    st.divider()
+    # Sammanfattning längst ned
+    st.markdown("---")
     c1, c2, c3, c4 = st.columns(4)
-    owned_df = df[df["Äger"] == True]
-    c1.metric("Kort Ägda", f"{len(owned_df)} / {len(df)}")
-    c2.metric("Totalt Köpt (SEK)", f"{owned_df['Köpt för (SEK)'].sum():,.2f} kr")
-    c3.metric("Totalt Värde (SEK)", f"{owned_df['Värde idag (SEK)' if 'Värde idag (SEK)' in owned_df else 'Värde (SEK)'].sum():,.2f} kr")
-    c4.metric("Vinst / Förlust", f"{(owned_df['Värde (SEK)'].sum() - owned_df['Köpt för (SEK)'].sum()):,.2f} kr")
+
+    total_owned = edited_df["Äger"].sum()
+    total_bought_eur = edited_df[edited_df["Äger"]]["Köpt för (EUR)"].sum()
+    total_val_eur = edited_df[edited_df["Äger"]]["Värde (EUR)"].sum()
+    total_bought_sek = edited_df[edited_df["Äger"]]["Köpt för (SEK)"].sum()
+    total_val_sek = edited_df[edited_df["Äger"]]["Värde (SEK)"].sum()
+
+    c1.metric("Kort Ägda", f"{total_owned} / {len(edited_df)}")
+    c2.metric("Totalt Köpt", f"{total_bought_eur:.2f} €", f"{total_bought_sek:.2f} SEK")
+    c3.metric("Totalt Värde", f"{total_val_eur:.2f} €", f"{total_val_sek:.2f} SEK")
+    c4.metric("Vinst / Förlust", f"{(total_val_eur - total_bought_eur):.2f} €", f"{(total_val_sek - total_bought_sek):.2f} SEK")
 else:
-    st.info("Ingen data hittades i JSON-filen.")
+    st.info("Ingen data hittades.")
