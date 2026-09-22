@@ -2481,5 +2481,18 @@
     "Värde (SEK)": 0.0,
     "Google Sök": "https://www.google.com/search?q=zapdos%20098%20promo%20cardmarket",
     "_id": "30th_098_Promo_Zapdos"
+  },
+   {
+    "Äger": false,
+    "Namn": "Greninja EX",
+    "Setnr.": "099 Promo",
+    "Symbol": "P",
+    "Sällsynthet": "Promo",
+    "Köpt för (EUR)": 0.0,
+    "Köpt för (SEK)": 0.0,
+    "Värde (EUR)": 0.0,
+    "Värde (SEK)": 0.0,
+    "Google Sök": "https://www.google.com/search?q=greninja%20EX%20099%20promo%20cardmarket",
+    "_id": "30th_099_Promo_Greninja_EX"
   }
 ]
