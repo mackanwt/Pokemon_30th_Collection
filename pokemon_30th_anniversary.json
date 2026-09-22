@@ -208,7 +208,7 @@
     "_id": "30th_016"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Lapras",
     "Setnr.": "017/128",
     "Symbol": "🔴 •",
@@ -234,7 +234,7 @@
     "_id": "30th_018"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Kyogre",
     "Setnr.": "019/128",
     "Symbol": "⭐ ★",
@@ -260,7 +260,7 @@
     "_id": "30th_020"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Greninja ex",
     "Setnr.": "021/128",
     "Symbol": "⭐⭐ ★★",
@@ -325,7 +325,7 @@
     "_id": "30th_025"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "026/128",
     "Symbol": "⚡ ⚡",
@@ -390,7 +390,7 @@
     "_id": "30th_030"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "031/128",
     "Symbol": "⚡ ⚡",
@@ -429,7 +429,7 @@
     "_id": "30th_033"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "034/128",
     "Symbol": "⚡ ⚡",
@@ -468,7 +468,7 @@
     "_id": "30th_036"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "037/128",
     "Symbol": "⚡ ⚡",
@@ -585,7 +585,7 @@
     "_id": "30th_045"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "046/128",
     "Symbol": "⚡ ⚡",
@@ -611,7 +611,7 @@
     "_id": "30th_047"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu",
     "Setnr.": "048/128",
     "Symbol": "⚡ ⚡",
@@ -702,7 +702,7 @@
     "_id": "30th_054"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Zapdos",
     "Setnr.": "055/128",
     "Symbol": "⭐ ★",
@@ -741,7 +741,7 @@
     "_id": "30th_057"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Toxel",
     "Setnr.": "058/128",
     "Symbol": "🔴 •",
@@ -767,7 +767,7 @@
     "_id": "30th_059"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Toxtricity",
     "Setnr.": "060/128",
     "Symbol": "🔴 •",
@@ -845,7 +845,7 @@
     "_id": "30th_065"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Mew ex",
     "Setnr.": "066/128",
     "Symbol": "⭐⭐ ★★",
@@ -884,7 +884,7 @@
     "_id": "30th_068"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Espeon",
     "Setnr.": "069/128",
     "Symbol": "⭐ ★",
@@ -897,7 +897,7 @@
     "_id": "30th_069"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Espeon ex",
     "Setnr.": "070/128",
     "Symbol": "⭐⭐ ★★",
@@ -910,7 +910,7 @@
     "_id": "30th_070"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Sylveon ex",
     "Setnr.": "071/128",
     "Symbol": "⭐⭐ ★★",
@@ -949,7 +949,7 @@
     "_id": "30th_073"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Cresselia",
     "Setnr.": "074/128",
     "Symbol": "⭐ ★",
@@ -975,7 +975,7 @@
     "_id": "30th_075"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Xerneas",
     "Setnr.": "076/128",
     "Symbol": "⭐ ★",
@@ -988,7 +988,7 @@
     "_id": "30th_076"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Comfey",
     "Setnr.": "077/128",
     "Symbol": "🔴 •",
@@ -1144,7 +1144,7 @@
     "_id": "30th_088"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Alolan Meowth",
     "Setnr.": "089/128",
     "Symbol": "🔴 •",
@@ -1248,7 +1248,7 @@
     "_id": "30th_096"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Deino",
     "Setnr.": "097/128",
     "Symbol": "🔴 •",
@@ -1300,7 +1300,7 @@
     "_id": "30th_100"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Galarian Meowth",
     "Setnr.": "101/128",
     "Symbol": "🔴 •",
@@ -1365,7 +1365,7 @@
     "_id": "30th_105"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Zacian",
     "Setnr.": "106/128",
     "Symbol": "⭐ ★",
@@ -1391,7 +1391,7 @@
     "_id": "30th_107"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Gholdengo",
     "Setnr.": "108/128",
     "Symbol": "🔴 •",
@@ -1456,7 +1456,7 @@
     "_id": "30th_112"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Meowth",
     "Setnr.": "113/128",
     "Symbol": "🔴 •",
@@ -1469,7 +1469,7 @@
     "_id": "30th_113"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Kangaskhan",
     "Setnr.": "114/128",
     "Symbol": "🔴 •",
@@ -1573,7 +1573,7 @@
     "_id": "30th_121"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Hisuian Zorua",
     "Setnr.": "122/128",
     "Symbol": "🔴 •",
@@ -1612,7 +1612,7 @@
     "_id": "30th_124"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Maushold",
     "Setnr.": "125/128",
     "Symbol": "🔴 •",
@@ -1638,7 +1638,7 @@
     "_id": "30th_126"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Switch",
     "Setnr.": "127/128",
     "Symbol": "🔴 •",
@@ -1781,7 +1781,7 @@
     "_id": "30th_137"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Lycanroc",
     "Setnr.": "138/128",
     "Symbol": "🎨⭐ ★",
@@ -2236,7 +2236,7 @@
     "_id": "30th_CC_47_Crobat_🔣"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Gengar",
     "Setnr.": "CC #94",
     "Symbol": "🔴🟡 ★C",
@@ -2366,7 +2366,7 @@
     "_id": "30th_CC_57_Buzzwole-GX"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Pikachu & Zekrom-GX",
     "Setnr.": "CC #33",
     "Symbol": "🔴🟡 ★C",
@@ -2444,7 +2444,7 @@
     "_id": "30th_CC_203_Magikarp"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Moltress",
     "Setnr.": "096 Promo",
     "Symbol": "P",
@@ -2457,7 +2457,7 @@
     "_id": "30th_096_Promo_Moltress"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Articuno",
     "Setnr.": "097 Promo",
     "Symbol": "P",
@@ -2470,7 +2470,7 @@
     "_id": "30th_097_Promo_Articuno"
   },
   {
-    "Äger": false,
+    "Äger": true,
     "Namn": "Zapdos",
     "Setnr.": "098 Promo",
     "Symbol": "P",
@@ -2482,8 +2482,8 @@
     "Google Sök": "https://www.google.com/search?q=zapdos%20098%20promo%20cardmarket",
     "_id": "30th_098_Promo_Zapdos"
   },
-   {
-    "Äger": false,
+  {
+    "Äger": true,
     "Namn": "Greninja EX",
     "Setnr.": "099 Promo",
     "Symbol": "P",
