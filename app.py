@@ -87,9 +87,14 @@ with col_rate:
 df = pd.DataFrame(st.session_state.cards_data)
 
 if not df.empty:
-    for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)", "Skick", "Egen Cardmarket Länk"]:
+    for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)"]:
         if col not in df.columns:
-            df[col] = False if col == "Äger" else (0.0 if "EUR" in col else "")
+            df[col] = False if col == "Äger" else 0.0
+
+    # Ta bort "Skick" och "Egen Cardmarket Länk" om de finns i datan
+    cols_to_drop = [c for c in ["Skick", "Egen Cardmarket Länk", "Egen Länk"] if c in df.columns]
+    if cols_to_drop:
+        df = df.drop(columns=cols_to_drop)
 
     df["Köpt för (SEK)"] = (pd.to_numeric(df["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
     df["Värde (SEK)"] = (pd.to_numeric(df["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
@@ -104,13 +109,11 @@ if not df.empty:
             "Setnr.": st.column_config.TextColumn("Setnr.", disabled=True),
             "Symbol": st.column_config.TextColumn("Symbol", disabled=True),
             "Sällsynthet": st.column_config.TextColumn("Sällsynthet", disabled=True),
-            "Skick": st.column_config.SelectboxColumn("Skick", options=["NM", "EX", "GD", "LP", "PL", "PO"]),
             "Köpt för (EUR)": st.column_config.NumberColumn("Köpt för (EUR)", format="%.2f €"),
             "Köpt för (SEK)": st.column_config.NumberColumn("Köpt för (SEK)", format="%.2f kr", disabled=True),
             "Värde (EUR)": st.column_config.NumberColumn("Värde (EUR)", format="%.2f €"),
             "Värde (SEK)": st.column_config.NumberColumn("Värde (SEK)", format="%.2f kr", disabled=True),
             "Google Sök": st.column_config.LinkColumn("Cardmarket / Sök", display_text="🔍 Sök på Cardmarket"),
-            "Egen Cardmarket Länk": st.column_config.TextColumn("Egen Länk")
         },
         disabled=["Namn", "Setnr.", "Symbol", "Sällsynthet", "Köpt för (SEK)", "Värde (SEK)", "Google Sök"],
         hide_index=True,
@@ -128,6 +131,11 @@ if not df.empty:
             else:
                 row_dict["_id"] = f"card_custom_{i}"
             
+            # Rensar bort eventuella kvarvarande fält för Skick och Egen Länk
+            row_dict.pop("Skick", None)
+            row_dict.pop("Egen Cardmarket Länk", None)
+            row_dict.pop("Egen Länk", None)
+
             # Räkna om SEK
             k_eur = float(row_dict.get("Köpt för (EUR)", 0.0) or 0.0)
             v_eur = float(row_dict.get("Värde (EUR)", 0.0) or 0.0)
@@ -136,7 +144,7 @@ if not df.empty:
             
             updated_data.append(row_dict)
 
-        # Använd den säkra github_save_file funktionen
+        # Spara via GitHub API
         success, msg = github_save_file(DATA_FILE_PATH, updated_data, "Uppdaterade 30th Anniversary samling")
 
         if success:
