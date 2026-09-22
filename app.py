@@ -7,7 +7,7 @@ st.set_page_config(page_title="Pokémon 30th Celebration Collector", layout="wid
 
 JSON_FILE = "pokemon_30th_anniversary.json"
 
-@st.cache_data
+# Läser in JSON utan caching så att ändringar syns direkt
 def load_data():
     if os.path.exists(JSON_FILE):
         with open(JSON_FILE, "r", encoding="utf-8") as f:
@@ -93,7 +93,6 @@ if not df.empty:
 
         save_data(raw_data)
         st.success("Dina ändringar har sparats!")
-        st.cache_data.clear()
         st.rerun()
 else:
-    st.error("Kör 'python generate_30th_json.py' i terminalen för att skapa JSON-filen först.")
+    st.error("Kunde inte hitta pokemon_30th_anniversary.json. Kontrollera att filen finns i ditt repository.")
