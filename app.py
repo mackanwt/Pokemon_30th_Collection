@@ -31,17 +31,25 @@ with col_rate:
         unsafe_allow_html=True
     )
 
-# Ladda data från JSON (utan @st.cache_data för att alltid ha senaste sparade filen)
+# Ladda data från JSON utan cachning så att senaste filen alltid läss in direkt
 def load_data():
-    with open("pokemon_30th_anniversary.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open("pokemon_30th_anniversary.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
 
 if "cards_data" not in st.session_state:
     st.session_state.cards_data = load_data()
 
+# Om filen på disk har uppdaterats externt (t.ex. vid manuell tillagd rad), läs in den på nytt om längden skiljer sig
+disk_data = load_data()
+if len(disk_data) != len(st.session_state.cards_data):
+    st.session_state.cards_data = disk_data
+
 df = pd.DataFrame(st.session_state.cards_data)
 
-# Ta bort _id från kolumnerna som skickas till data_editor för att helt dölja den
+# Ta bort _id från kolumnerna som skickas till data_editor för att dölja den i tabellen
 display_columns = [col for col in df.columns if col != "_id"]
 
 edited_df = st.data_editor(
@@ -64,51 +72,42 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# Knapp för att spara ändringar permanent
+# Knapp för att spara ändringar permanent direkt till JSON-filen
 if st.button("💾 Spara ändringar", type="primary"):
-    # Uppdatera edited_df utifrån förändringar i tabellen
+    # Synka ändringarna från editor-statusen till dataframe
     if "editor" in st.session_state and st.session_state.editor.get("edited_rows"):
         edited_rows = st.session_state.editor["edited_rows"]
-
         for row_idx, changes in edited_rows.items():
-            # Uppdatera Äger om det ändrades
-            if "Äger" in changes:
-                edited_df.at[row_idx, "Äger"] = changes["Äger"]
+            for col_name, new_val in changes.items():
+                df.at[int(row_idx), col_name] = new_val
+                
+                # Automatisk omräkning av SEK/EUR vid behov
+                if col_name == "Köpt för (EUR)":
+                    df.at[int(row_idx), "Köpt för (SEK)"] = round(float(new_val) * exchange_rate, 2)
+                elif col_name == "Köpt för (SEK)":
+                    df.at[int(row_idx), "Köpt för (EUR)"] = round(float(new_val) / exchange_rate, 2) if exchange_rate > 0 else 0.0
+                elif col_name == "Värde (EUR)":
+                    df.at[int(row_idx), "Värde (SEK)"] = round(float(new_val) * exchange_rate, 2)
+                elif col_name == "Värde (SEK)":
+                    df.at[int(row_idx), "Värde (EUR)"] = round(float(new_val) / exchange_rate, 2) if exchange_rate > 0 else 0.0
 
-            # Om Köpt för (EUR) ändras -> beräkna SEK
-            if "Köpt för (EUR)" in changes and "Köpt för (SEK)" not in changes:
-                eur_val = float(changes["Köpt för (EUR)"])
-                edited_df.at[row_idx, "Köpt för (EUR)"] = eur_val
-                edited_df.at[row_idx, "Köpt för (SEK)"] = round(eur_val * exchange_rate, 2)
+    # Behåll ursprungliga _id-värden för varje rad
+    updated_data = []
+    for i, row in df.iterrows():
+        row_dict = row.to_dict()
+        if i < len(st.session_state.cards_data):
+            row_dict["_id"] = st.session_state.cards_data[i].get("_id", f"card_{i}")
+        else:
+            row_dict["_id"] = f"card_custom_{i}"
+        updated_data.append(row_dict)
+        
+    st.session_state.cards_data = updated_data
 
-            # Om Köpt för (SEK) ändras -> beräkna EUR
-            elif "Köpt för (SEK)" in changes and "Köpt för (EUR)" not in changes:
-                sek_val = float(changes["Köpt för (SEK)"])
-                edited_df.at[row_idx, "Köpt för (SEK)"] = sek_val
-                edited_df.at[row_idx, "Köpt för (EUR)"] = round(sek_val / exchange_rate, 2) if exchange_rate > 0 else 0.0
-
-            # Om Värde (EUR) ändras -> beräkna SEK
-            if "Värde (EUR)" in changes and "Värde (SEK)" not in changes:
-                eur_val = float(changes["Värde (EUR)"])
-                edited_df.at[row_idx, "Värde (EUR)"] = eur_val
-                edited_df.at[row_idx, "Värde (SEK)"] = round(eur_val * exchange_rate, 2)
-
-            # Om Värde (SEK) ändras -> beräkna EUR
-            elif "Värde (SEK)" in changes and "Värde (EUR)" not in changes:
-                sek_val = float(changes["Värde (SEK)"])
-                edited_df.at[row_idx, "Värde (SEK)"] = sek_val
-                edited_df.at[row_idx, "Värde (EUR)"] = round(sek_val / exchange_rate, 2) if exchange_rate > 0 else 0.0
-
-    # Återställ _id-kolumnen om den fanns i ursprungliga dataframe
-    if "_id" in df.columns:
-        edited_df["_id"] = df["_id"]
-
-    # Spara den uppdaterade tabellen i session state och skriv till JSON-filen
-    st.session_state.cards_data = edited_df.to_dict(orient="records")
+    # SKRIV DIREKT TILL JSON-FILEN PÅ DISKEN
     with open("pokemon_30th_anniversary.json", "w", encoding="utf-8") as f:
         json.dump(st.session_state.cards_data, f, ensure_ascii=False, indent=2)
 
-    st.success("Ändringarna har sparats permanent!")
+    st.success("Ändringarna har sparats permanent direkt till JSON-filen!")
     st.rerun()
 
 # Sammanfattning längst ned
