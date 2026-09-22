@@ -31,7 +31,7 @@ with col_rate:
         unsafe_allow_html=True
     )
 
-# Ladda data
+# Ladda data från JSON (utan @st.cache_data för att alltid ha senaste sparade filen)
 def load_data():
     with open("pokemon_30th_anniversary.json", "r", encoding="utf-8") as f:
         return json.load(f)
@@ -64,13 +64,17 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# Knapp för att spara alla ändringar permanent
+# Knapp för att spara ändringar permanent
 if st.button("💾 Spara ändringar", type="primary"):
-    # Hämta ändringar som gjorts i session_state
+    # Uppdatera edited_df utifrån förändringar i tabellen
     if "editor" in st.session_state and st.session_state.editor.get("edited_rows"):
         edited_rows = st.session_state.editor["edited_rows"]
 
         for row_idx, changes in edited_rows.items():
+            # Uppdatera Äger om det ändrades
+            if "Äger" in changes:
+                edited_df.at[row_idx, "Äger"] = changes["Äger"]
+
             # Om Köpt för (EUR) ändras -> beräkna SEK
             if "Köpt för (EUR)" in changes and "Köpt för (SEK)" not in changes:
                 eur_val = float(changes["Köpt för (EUR)"])
@@ -95,29 +99,29 @@ if st.button("💾 Spara ändringar", type="primary"):
                 edited_df.at[row_idx, "Värde (SEK)"] = sek_val
                 edited_df.at[row_idx, "Värde (EUR)"] = round(sek_val / exchange_rate, 2) if exchange_rate > 0 else 0.0
 
-    # Återställ _id-kolumnen om den fanns tidigare
+    # Återställ _id-kolumnen om den fanns i ursprungliga dataframe
     if "_id" in df.columns:
         edited_df["_id"] = df["_id"]
 
-    # Spara till session_state och JSON-filen
+    # Spara den uppdaterade tabellen i session state och skriv till JSON-filen
     st.session_state.cards_data = edited_df.to_dict(orient="records")
     with open("pokemon_30th_anniversary.json", "w", encoding="utf-8") as f:
         json.dump(st.session_state.cards_data, f, ensure_ascii=False, indent=2)
 
-    st.success("Ändringarna sparades!")
+    st.success("Ändringarna har sparats permanent!")
     st.rerun()
 
 # Sammanfattning längst ned
 st.markdown("---")
 c1, c2, c3, c4 = st.columns(4)
 
-total_owned = df["Äger"].sum()
-total_bought_eur = df[df["Äger"]]["Köpt för (EUR)"].sum()
-total_val_eur = df[df["Äger"]]["Värde (EUR)"].sum()
-total_bought_sek = df[df["Äger"]]["Köpt för (SEK)"].sum()
-total_val_sek = df[df["Äger"]]["Värde (SEK)"].sum()
+total_owned = edited_df["Äger"].sum()
+total_bought_eur = edited_df[edited_df["Äger"]]["Köpt för (EUR)"].sum()
+total_val_eur = edited_df[edited_df["Äger"]]["Värde (EUR)"].sum()
+total_bought_sek = edited_df[edited_df["Äger"]]["Köpt för (SEK)"].sum()
+total_val_sek = edited_df[edited_df["Äger"]]["Värde (SEK)"].sum()
 
-c1.metric("Kort Ägda", f"{total_owned} / {len(df)}")
+c1.metric("Kort Ägda", f"{total_owned} / {len(edited_df)}")
 c2.metric("Totalt Köpt för", f"{total_bought_eur:.2f} €", f"{total_bought_sek:.2f} SEK")
 c3.metric("Totalt Värde", f"{total_val_eur:.2f} €", f"{total_val_sek:.2f} SEK")
 c4.metric("Vinst / Förlust", f"{(total_val_eur - total_bought_eur):.2f} €", f"{(total_val_sek - total_bought_sek):.2f} SEK")
