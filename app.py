@@ -91,10 +91,15 @@ if not df_all.empty:
         if col not in df_all.columns:
             df_all[col] = False if col == "Äger" else 0.0
 
-    # Rensa bort oönskade kolumner om de finns kvar
     for c in ["Skick", "Egen Cardmarket Länk", "Egen Länk"]:
         if c in df_all.columns:
             df_all = df_all.drop(columns=[c])
+
+    # Se till att SEK-kolumner finns i dataframe
+    if "Köpt för (SEK)" not in df_all.columns:
+        df_all["Köpt för (SEK)"] = (pd.to_numeric(df_all["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
+    if "Värde (SEK)" not in df_all.columns:
+        df_all["Värde (SEK)"] = (pd.to_numeric(df_all["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
 
     # --- FILTER & SORTERING ---
     st.markdown("### 🔍 Filter & Sortering")
@@ -108,7 +113,7 @@ if not df_all.empty:
     with f_col2:
         filter_status = st.radio("Visa:", ["Alla", "Bara Ägda", "Bara Saknade"], horizontal=True)
 
-    # Applicera filter
+    # Applicera filter för visning i tabellen
     filtered_df = df_all.copy()
     if selected_rarities:
         filtered_df = filtered_df[filtered_df["Sällsynthet"].isin(selected_rarities)]
@@ -117,10 +122,6 @@ if not df_all.empty:
         filtered_df = filtered_df[filtered_df["Äger"] == True]
     elif filter_status == "Bara Saknade":
         filtered_df = filtered_df[filtered_df["Äger"] == False]
-
-    # Beräkna SEK
-    filtered_df["Köpt för (SEK)"] = (pd.to_numeric(filtered_df["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
-    filtered_df["Värde (SEK)"] = (pd.to_numeric(filtered_df["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
 
     display_columns = [col for col in filtered_df.columns if col != "_id"]
 
@@ -136,19 +137,18 @@ if not df_all.empty:
             "Symbol": st.column_config.TextColumn("Symbol", disabled=True),
             "Sällsynthet": st.column_config.TextColumn("Sällsynthet", disabled=True),
             "Köpt för (EUR)": st.column_config.NumberColumn("Köpt för (EUR)", format="%.2f €"),
-            "Köpt för (SEK)": st.column_config.NumberColumn("Köpt för (SEK)", format="%.2f kr", disabled=True),
+            "Köpt för (SEK)": st.column_config.NumberColumn("Köpt för (SEK)", format="%.2f kr"),
             "Värde (EUR)": st.column_config.NumberColumn("Värde (EUR)", format="%.2f €"),
-            "Värde (SEK)": st.column_config.NumberColumn("Värde (SEK)", format="%.2f kr", disabled=True),
+            "Värde (SEK)": st.column_config.NumberColumn("Värde (SEK)", format="%.2f kr"),
             "Google Sök": st.column_config.LinkColumn("Cardmarket / Sök", display_text="🔍 Sök på Cardmarket"),
         },
-        disabled=["Namn", "Setnr.", "Symbol", "Sällsynthet", "Köpt för (SEK)", "Värde (SEK)", "Google Sök"],
+        disabled=["Namn", "Setnr.", "Symbol", "Sällsynthet", "Google Sök"],
         hide_index=True,
         use_container_width=True,
         key="editor"
     )
 
     if st.button("💾 Spara ändringar till GitHub", type="primary"):
-        # Synka ändringarna från den filtrerade vyn tillbaka till hela datan
         edited_dict_list = edited_df.to_dict(orient="records")
         edited_map = {row["Setnr."]: row for row in edited_dict_list}
 
@@ -158,13 +158,35 @@ if not df_all.empty:
             if s_nr in edited_map:
                 r = edited_map[s_nr]
                 orig_row["Äger"] = bool(r.get("Äger", False))
-                orig_row["Köpt för (EUR)"] = float(r.get("Köpt för (EUR)", 0.0) or 0.0)
-                orig_row["Värde (EUR)"] = float(r.get("Värde (EUR)", 0.0) or 0.0)
-            
-            k_eur = float(orig_row.get("Köpt för (EUR)", 0.0) or 0.0)
-            v_eur = float(orig_row.get("Värde (EUR)", 0.0) or 0.0)
-            orig_row["Köpt för (SEK)"] = round(k_eur * exchange_rate, 2)
-            orig_row["Värde (SEK)"] = round(v_eur * exchange_rate, 2)
+                
+                # Hämta gamla värden för att se vad som ändrats
+                old_k_eur = float(orig_row.get("Köpt för (EUR)", 0.0) or 0.0)
+                old_k_sek = float(orig_row.get("Köpt för (SEK)", (old_k_eur * exchange_rate)) or 0.0)
+                
+                new_k_eur = float(r.get("Köpt för (EUR)", 0.0) or 0.0)
+                new_k_sek = float(r.get("Köpt för (SEK)", 0.0) or 0.0)
+
+                # Om användaren ändrat SEK men inte EUR (eller om SEK skiljer sig från gamla beräkningen)
+                if new_k_sek != round(old_k_eur * exchange_rate, 2) and new_k_sek != old_k_sek:
+                    orig_row["Köpt för (SEK)"] = round(new_k_sek, 2)
+                    orig_row["Köpt för (EUR)"] = round(new_k_sek / exchange_rate, 2)
+                else:
+                    orig_row["Köpt för (EUR)"] = round(new_k_eur, 2)
+                    orig_row["Köpt för (SEK)"] = round(new_k_eur * exchange_rate, 2)
+
+                # Samma logik för Värde
+                old_v_eur = float(orig_row.get("Värde (EUR)", 0.0) or 0.0)
+                old_v_sek = float(orig_row.get("Värde (SEK)", (old_v_eur * exchange_rate)) or 0.0)
+                
+                new_v_eur = float(r.get("Värde (EUR)", 0.0) or 0.0)
+                new_v_sek = float(r.get("Värde (SEK)", 0.0) or 0.0)
+
+                if new_v_sek != round(old_v_eur * exchange_rate, 2) and new_v_sek != old_v_sek:
+                    orig_row["Värde (SEK)"] = round(new_v_sek, 2)
+                    orig_row["Värde (EUR)"] = round(new_v_sek / exchange_rate, 2)
+                else:
+                    orig_row["Värde (EUR)"] = round(new_v_eur, 2)
+                    orig_row["Värde (SEK)"] = round(new_v_eur * exchange_rate, 2)
             
             updated_data.append(orig_row)
 
@@ -177,17 +199,23 @@ if not df_all.empty:
         else:
             st.error(f"Kunde inte spara till GitHub: {msg}")
 
-    # Sammanfattning längst ned (baserat på hela samlingen)
+    # Sammanfattning längst ned (beräknas på hela samlingen)
+    # För att få rätt summor uppdaterar vi dataframe-objektet temporärt
+    temp_df = pd.DataFrame(st.session_state.cards_data)
+    for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)", "Köpt för (SEK)", "Värde (SEK)"]:
+        if col not in temp_df.columns:
+            temp_df[col] = False if col == "Äger" else 0.0
+
     st.markdown("---")
     c1, c2, c3, c4 = st.columns(4)
 
-    total_owned = df_all["Äger"].sum()
-    total_bought_eur = df_all[df_all["Äger"]]["Köpt för (EUR)"].sum()
-    total_val_eur = df_all[df_all["Äger"]]["Värde (EUR)"].sum()
-    total_bought_sek = df_all[df_all["Äger"]]["Köpt för (SEK)"].sum()
-    total_val_sek = df_all[df_all["Äger"]]["Värde (SEK)"].sum()
+    total_owned = temp_df["Äger"].sum()
+    total_bought_eur = temp_df[temp_df["Äger"]]["Köpt för (EUR)"].astype(float).sum()
+    total_val_eur = temp_df[temp_df["Äger"]]["Värde (EUR)"].astype(float).sum()
+    total_bought_sek = temp_df[temp_df["Äger"]]["Köpt för (SEK)"].astype(float).sum()
+    total_val_sek = temp_df[temp_df["Äger"]]["Värde (SEK)"].astype(float).sum()
 
-    c1.metric("Kort Ägda", f"{total_owned} / {len(df_all)}")
+    c1.metric("Kort Ägda", f"{total_owned} / {len(temp_df)}")
     c2.metric("Totalt Köpt", f"{total_bought_eur:.2f} €", f"{total_bought_sek:.2f} SEK")
     c3.metric("Totalt Värde", f"{total_val_eur:.2f} €", f"{total_val_sek:.2f} SEK")
     c4.metric("Vinst / Förlust", f"{(total_val_eur - total_bought_eur):.2f} €", f"{(total_val_sek - total_bought_sek):.2f} SEK")
