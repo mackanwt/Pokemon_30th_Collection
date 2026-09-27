@@ -87,9 +87,14 @@ with col_rate:
 df_all = pd.DataFrame(st.session_state.cards_data)
 
 if not df_all.empty:
-    for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)"]:
+    for col in ["Äger", "Antal", "Köpt för (EUR)", "Värde (EUR)"]:
         if col not in df_all.columns:
-            df_all[col] = False if col == "Äger" else 0.0
+            if col == "Äger":
+                df_all[col] = False
+            elif col == "Antal":
+                df_all[col] = 1
+            else:
+                df_all[col] = 0.0
 
     for c in ["Skick", "Egen Cardmarket Länk", "Egen Länk"]:
         if c in df_all.columns:
@@ -125,6 +130,10 @@ if not df_all.empty:
 
     display_columns = [col for col in filtered_df.columns if col != "_id"]
 
+    # Säkerställ ordningen på kolumnerna så att "Antal" hamnar mellan "Äger" och "Namn"
+    desired_order = ["Äger", "Antal", "Namn", "Setnr.", "Symbol", "Sällsynthet", "Köpt för (EUR)", "Köpt för (SEK)", "Värde (EUR)", "Värde (SEK)", "Google Sök"]
+    display_columns = [c for c in desired_order if c in display_columns] + [c for c in display_columns if c not in desired_order]
+
     st.markdown("---")
     st.markdown("### 📋 Kortlista")
 
@@ -132,6 +141,7 @@ if not df_all.empty:
         filtered_df[display_columns],
         column_config={
             "Äger": st.column_config.CheckboxColumn("Äger", default=False),
+            "Antal": st.column_config.NumberColumn("Antal", min_value=1, step=1, format="%d"),
             "Namn": st.column_config.TextColumn("Namn", disabled=True),
             "Setnr.": st.column_config.TextColumn("Setnr.", disabled=True),
             "Symbol": st.column_config.TextColumn("Symbol", disabled=True),
@@ -158,6 +168,10 @@ if not df_all.empty:
             if s_nr in edited_map:
                 r = edited_map[s_nr]
                 orig_row["Äger"] = bool(r.get("Äger", False))
+                try:
+                    orig_row["Antal"] = int(r.get("Antal", 1))
+                except (ValueError, TypeError):
+                    orig_row["Antal"] = 1
                 
                 # Hämta gamla värden för att se vad som ändrats
                 old_k_eur = float(orig_row.get("Köpt för (EUR)", 0.0) or 0.0)
@@ -200,20 +214,30 @@ if not df_all.empty:
             st.error(f"Kunde inte spara till GitHub: {msg}")
 
     # Sammanfattning längst ned (beräknas på hela samlingen)
-    # För att få rätt summor uppdaterar vi dataframe-objektet temporärt
     temp_df = pd.DataFrame(st.session_state.cards_data)
-    for col in ["Äger", "Köpt för (EUR)", "Värde (EUR)", "Köpt för (SEK)", "Värde (SEK)"]:
+    for col in ["Äger", "Antal", "Köpt för (EUR)", "Värde (EUR)", "Köpt för (SEK)", "Värde (SEK)"]:
         if col not in temp_df.columns:
-            temp_df[col] = False if col == "Äger" else 0.0
+            if col == "Äger":
+                temp_df[col] = False
+            elif col == "Antal":
+                temp_df[col] = 1
+            else:
+                temp_df[col] = 0.0
 
     st.markdown("---")
     c1, c2, c3, c4 = st.columns(4)
 
+    # Kort Ägda räknar enbart antalet unika kort som ägs (påverkas inte av dubletter)
     total_owned = temp_df["Äger"].sum()
-    total_bought_eur = temp_df[temp_df["Äger"]]["Köpt för (EUR)"].astype(float).sum()
-    total_val_eur = temp_df[temp_df["Äger"]]["Värde (EUR)"].astype(float).sum()
-    total_bought_sek = temp_df[temp_df["Äger"]]["Köpt för (SEK)"].astype(float).sum()
-    total_val_sek = temp_df[temp_df["Äger"]]["Värde (SEK)"].astype(float).sum()
+
+    # Beräkningar som tar hänsyn till antal dubletter (multiplicerar per ägt radobjekt)
+    owned_mask = temp_df["Äger"] == True
+    quantities = pd.to_numeric(temp_df.loc[owned_mask, "Antal"], errors='coerce').fillna(1)
+
+    total_bought_eur = (temp_df.loc[owned_mask, "Köpt för (EUR)"].astype(float) * quantities).sum()
+    total_val_eur = (temp_df.loc[owned_mask, "Värde (EUR)"].astype(float) * quantities).sum()
+    total_bought_sek = (temp_df.loc[owned_mask, "Köpt för (SEK)"].astype(float) * quantities).sum()
+    total_val_sek = (temp_df.loc[owned_mask, "Värde (SEK)"].astype(float) * quantities).sum()
 
     c1.metric("Kort Ägda", f"{total_owned} / {len(temp_df)}")
     c2.metric("Totalt Köpt", f"{total_bought_eur:.2f} €", f"{total_bought_sek:.2f} SEK")
