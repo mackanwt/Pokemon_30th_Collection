@@ -61,12 +61,34 @@ def github_save_file(file_path: str, content: Any, commit_message: str) -> Tuple
 def get_eur_sek_rate():
     try:
         response = requests.get("https://open.er-api.com/v6/latest/EUR")
-        data = response.json()
-        return float(data["rates"]["SEK"])
+        return float(response.json()["rates"]["SEK"])
     except Exception:
         return 11.28
 
 exchange_rate = get_eur_sek_rate()
+
+# --- HJÄLPFUNKTION FÖR DATAFRAME ---
+def prepare_card_dataframe(data: list) -> pd.DataFrame:
+    df = pd.DataFrame(data)
+    if df.empty:
+        return df
+
+    # Sätt standardvärden för saknade kolumner
+    defaults = {"Äger": False, "Antal": 1, "Köpt för (EUR)": 0.0, "Värde (EUR)": 0.0}
+    for col, default_val in defaults.items():
+        if col not in df.columns:
+            df[col] = default_val
+
+    # Rensa ut ovälkomna kolumner om de finns
+    df = df.drop(columns=[c for c in ["Skick", "Egen Cardmarket Länk", "Egen Länk"] if c in df.columns])
+
+    # Skapa SEK-kolumner om de saknas
+    if "Köpt för (SEK)" not in df.columns:
+        df["Köpt för (SEK)"] = (pd.to_numeric(df["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
+    if "Värde (SEK)" not in df.columns:
+        df["Värde (SEK)"] = (pd.to_numeric(df["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
+
+    return df
 
 # --- LADDA DATA ---
 if "cards_data" not in st.session_state:
@@ -84,28 +106,9 @@ with col_rate:
         unsafe_allow_html=True
     )
 
-df_all = pd.DataFrame(st.session_state.cards_data)
+df_all = prepare_card_dataframe(st.session_state.cards_data)
 
 if not df_all.empty:
-    for col in ["Äger", "Antal", "Köpt för (EUR)", "Värde (EUR)"]:
-        if col not in df_all.columns:
-            if col == "Äger":
-                df_all[col] = False
-            elif col == "Antal":
-                df_all[col] = 1
-            else:
-                df_all[col] = 0.0
-
-    for c in ["Skick", "Egen Cardmarket Länk", "Egen Länk"]:
-        if c in df_all.columns:
-            df_all = df_all.drop(columns=[c])
-
-    # Se till att SEK-kolumner finns i dataframe
-    if "Köpt för (SEK)" not in df_all.columns:
-        df_all["Köpt för (SEK)"] = (pd.to_numeric(df_all["Köpt för (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
-    if "Värde (SEK)" not in df_all.columns:
-        df_all["Värde (SEK)"] = (pd.to_numeric(df_all["Värde (EUR)"], errors='coerce').fillna(0.0) * exchange_rate).round(2)
-
     # --- FILTER & SORTERING ---
     st.markdown("### 🔍 Filter & Sortering")
     f_col1, f_col2 = st.columns([3, 1])
@@ -118,7 +121,6 @@ if not df_all.empty:
     with f_col2:
         filter_status = st.radio("Visa:", ["Alla", "Bara Ägda", "Bara Saknade"], horizontal=True)
 
-    # Applicera filter för visning i tabellen
     filtered_df = df_all.copy()
     if selected_rarities:
         filtered_df = filtered_df[filtered_df["Sällsynthet"].isin(selected_rarities)]
@@ -128,9 +130,8 @@ if not df_all.empty:
     elif filter_status == "Bara Saknade":
         filtered_df = filtered_df[filtered_df["Äger"] == False]
 
+    # Bestäm kolumnordning
     display_columns = [col for col in filtered_df.columns if col != "_id"]
-
-    # Säkerställ ordningen på kolumnerna så att "Antal" hamnar mellan "Äger" och "Namn"
     desired_order = ["Äger", "Antal", "Namn", "Setnr.", "Symbol", "Sällsynthet", "Köpt för (EUR)", "Köpt för (SEK)", "Värde (EUR)", "Värde (SEK)", "Google Sök"]
     display_columns = [c for c in desired_order if c in display_columns] + [c for c in display_columns if c not in desired_order]
 
@@ -159,10 +160,9 @@ if not df_all.empty:
     )
 
     if st.button("💾 Spara ändringar till GitHub", type="primary"):
-        edited_dict_list = edited_df.to_dict(orient="records")
-        edited_map = {row["Setnr."]: row for row in edited_dict_list}
-
+        edited_map = {row["Setnr."]: row for row in edited_df.to_dict(orient="records")}
         updated_data = []
+
         for orig_row in st.session_state.cards_data:
             s_nr = orig_row.get("Setnr.")
             if s_nr in edited_map:
@@ -173,34 +173,21 @@ if not df_all.empty:
                 except (ValueError, TypeError):
                     orig_row["Antal"] = 1
                 
-                # Hämta gamla värden för att se vad som ändrats
-                old_k_eur = float(orig_row.get("Köpt för (EUR)", 0.0) or 0.0)
-                old_k_sek = float(orig_row.get("Köpt för (SEK)", (old_k_eur * exchange_rate)) or 0.0)
-                
-                new_k_eur = float(r.get("Köpt för (EUR)", 0.0) or 0.0)
-                new_k_sek = float(r.get("Köpt för (SEK)", 0.0) or 0.0)
+                # Uppdatera prislogik (EUR / SEK)
+                for prefix in ["Köpt för", "Värde"]:
+                    eur_key, sek_key = f"{prefix} (EUR)", f"{prefix} (SEK)"
+                    old_eur = float(orig_row.get(eur_key, 0.0) or 0.0)
+                    old_sek = float(orig_row.get(sek_key, (old_eur * exchange_rate)) or 0.0)
+                    
+                    new_eur = float(r.get(eur_key, 0.0) or 0.0)
+                    new_sek = float(r.get(sek_key, 0.0) or 0.0)
 
-                # Om användaren ändrat SEK men inte EUR (eller om SEK skiljer sig från gamla beräkningen)
-                if new_k_sek != round(old_k_eur * exchange_rate, 2) and new_k_sek != old_k_sek:
-                    orig_row["Köpt för (SEK)"] = round(new_k_sek, 2)
-                    orig_row["Köpt för (EUR)"] = round(new_k_sek / exchange_rate, 2)
-                else:
-                    orig_row["Köpt för (EUR)"] = round(new_k_eur, 2)
-                    orig_row["Köpt för (SEK)"] = round(new_k_eur * exchange_rate, 2)
-
-                # Samma logik för Värde
-                old_v_eur = float(orig_row.get("Värde (EUR)", 0.0) or 0.0)
-                old_v_sek = float(orig_row.get("Värde (SEK)", (old_v_eur * exchange_rate)) or 0.0)
-                
-                new_v_eur = float(r.get("Värde (EUR)", 0.0) or 0.0)
-                new_v_sek = float(r.get("Värde (SEK)", 0.0) or 0.0)
-
-                if new_v_sek != round(old_v_eur * exchange_rate, 2) and new_v_sek != old_v_sek:
-                    orig_row["Värde (SEK)"] = round(new_v_sek, 2)
-                    orig_row["Värde (EUR)"] = round(new_v_sek / exchange_rate, 2)
-                else:
-                    orig_row["Värde (EUR)"] = round(new_v_eur, 2)
-                    orig_row["Värde (SEK)"] = round(new_v_eur * exchange_rate, 2)
+                    if new_sek != round(old_eur * exchange_rate, 2) and new_sek != old_sek:
+                        orig_row[sek_key] = round(new_sek, 2)
+                        orig_row[eur_key] = round(new_sek / exchange_rate, 2)
+                    else:
+                        orig_row[eur_key] = round(new_eur, 2)
+                        orig_row[sek_key] = round(new_eur * exchange_rate, 2)
             
             updated_data.append(orig_row)
 
@@ -213,24 +200,13 @@ if not df_all.empty:
         else:
             st.error(f"Kunde inte spara till GitHub: {msg}")
 
-    # Sammanfattning längst ned (beräknas på hela samlingen)
-    temp_df = pd.DataFrame(st.session_state.cards_data)
-    for col in ["Äger", "Antal", "Köpt för (EUR)", "Värde (EUR)", "Köpt för (SEK)", "Värde (SEK)"]:
-        if col not in temp_df.columns:
-            if col == "Äger":
-                temp_df[col] = False
-            elif col == "Antal":
-                temp_df[col] = 1
-            else:
-                temp_df[col] = 0.0
+    # Sammanfattning längst ned
+    temp_df = prepare_card_dataframe(st.session_state.cards_data)
 
     st.markdown("---")
     c1, c2, c3, c4 = st.columns(4)
 
-    # Kort Ägda räknar enbart antalet unika kort som ägs (påverkas inte av dubletter)
     total_owned = temp_df["Äger"].sum()
-
-    # Beräkningar som tar hänsyn till antal dubletter (multiplicerar per ägt radobjekt)
     owned_mask = temp_df["Äger"] == True
     quantities = pd.to_numeric(temp_df.loc[owned_mask, "Antal"], errors='coerce').fillna(1)
 
