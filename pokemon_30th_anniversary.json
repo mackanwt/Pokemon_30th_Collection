@@ -2686,5 +2686,19 @@
     "Google Sök": "https://www.google.com/search?q=greninja%20EX%20099%20promo%20cardmarket",
     "_id": "30th_099_Promo_Greninja_EX",
     "Antal": 1
+  },
+    {
+    "Äger": true,
+    "Namn": "Energy",
+    "Setnr.": "E",
+    "Symbol": "E",
+    "Sällsynthet": "Energy",
+    "Köpt för (EUR)": 2.7,
+    "Köpt för (SEK)": 30.57,
+    "Värde (EUR)": 0.0,
+    "Värde (SEK)": 0.0,
+    "Google Sök": "https://www.google.com/search?q=Energy%20cardmarket",
+    "_id": "30th_Energy",
+    "Antal": 1
   }
 ]
