@@ -2633,6 +2633,34 @@
   },
   {
     "Äger": true,
+    "Namn": "Charmander",
+    "Setnr.": "038 Promo",
+    "Symbol": "P",
+    "Sällsynthet": "Promo",
+    "Köpt för (EUR)": 4.42,
+    "Köpt för (SEK)": 49.08,
+    "Värde (EUR)": 0.0,
+    "Värde (SEK)": 0.0,
+    "Google Sök": "https://www.google.com/search?q=charmander%20038%20promo%20cardmarket",
+    "_id": "30th_038_Promo_Charmander",
+    "Antal": 1
+  },
+  {
+    "Äger": true,
+    "Namn": "Froakie",
+    "Setnr.": "060 Promo",
+    "Symbol": "P",
+    "Sällsynthet": "Promo",
+    "Köpt för (EUR)": 4.42,
+    "Köpt för (SEK)": 49.08,
+    "Värde (EUR)": 0.0,
+    "Värde (SEK)": 0.0,
+    "Google Sök": "https://www.google.com/search?q=Froakie%20060%20promo%20cardmarket",
+    "_id": "30th_060_Promo_Froakie",
+    "Antal": 1
+  },
+  {
+    "Äger": true,
     "Namn": "Moltress",
     "Setnr.": "096 Promo",
     "Symbol": "P",
@@ -2685,6 +2713,20 @@
     "Värde (SEK)": 0.0,
     "Google Sök": "https://www.google.com/search?q=greninja%20EX%20099%20promo%20cardmarket",
     "_id": "30th_099_Promo_Greninja_EX",
+    "Antal": 1
+  },
+  {
+    "Äger": true,
+    "Namn": "Nidorina",
+    "Setnr.": "101 Promo",
+    "Symbol": "P",
+    "Sällsynthet": "Promo",
+    "Köpt för (EUR)": 4.42,
+    "Köpt för (SEK)": 49.08,
+    "Värde (EUR)": 0.0,
+    "Värde (SEK)": 0.0,
+    "Google Sök": "https://www.google.com/search?q=Nidorina%20101%20promo%20cardmarket",
+    "_id": "30th_101_Promo_Nidorina",
     "Antal": 1
   },
   {
